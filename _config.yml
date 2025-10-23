@@ -193,6 +193,7 @@ exclude:
   - _pages/publications.md
   - _pages/repositories.md
   - _pages/profiles.md
+  - _news
   - purgecss.config.js
   - README.md
   - readme_preview/
