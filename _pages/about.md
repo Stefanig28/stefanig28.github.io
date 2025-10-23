@@ -9,9 +9,8 @@ profile:
   image: prof_pic.jpg
   image_circular: false # crops the image to make it circular
   more_info: >
-    <p>555 your office number</p>
-    <p>123 your address street</p>
-    <p>Your City, State 12345</p>
+    <p>Location: Medellín, Antioquia, Colombia</p>
+    <p>Phone: <a href="tel:+573205286864">+57 320 528 6864</a></p>
 
 selected_papers: true # includes a list of papers marked as "selected={true}"
 social: true # includes social icons at the bottom of the page
@@ -27,8 +26,14 @@ latest_posts:
   limit: 3 # leave blank to include all the blog posts
 ---
 
-Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](http://reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
+I design and develop modern, scalable web applications using Python, Java, FastAPI, and Spring Boot.
+My experience spans both relational (MySQL, PostgreSQL) and non-relational (MongoDB) databases, delivering robust and efficient solutions.
 
-Put your address / P.O. box / other info right below your picture. You can also disable any of these elements by editing `profile` property of the YAML header of your `_pages/about.md`. Edit `_bibliography/papers.bib` and Jekyll will render your [publications page](/al-folio/publications/) automatically.
+On the frontend, I build intuitive and optimized interfaces using React, TypeScript, JavaScript, HTML, and CSS.
+Experienced in integrating REST and GraphQL APIs, including Shopify API for e-commerce solutions.
 
-Link to your social media connections, too. This theme is set up to use [Font Awesome icons](https://fontawesome.com/) and [Academicons](https://jpswalsh.github.io/academicons/), like the ones below. Add your Facebook, Twitter, LinkedIn, Google Scholar, or just disable all of them.
+I also develop custom interfaces in Webflow through embedded and before-body custom code.
+Skilled in automated testing (Pytest, JUnit), containerization with Docker, and version control with Git/GitHub.
+
+I apply SOLID principles, design patterns, and best practices to ensure clean, maintainable, and scalable code.
+I quickly adapt to new environments and enjoy collaborating with multidisciplinary teams to build innovative solutions.
