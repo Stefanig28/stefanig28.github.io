@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Unblended
-description: Coffee page
+description: Coffee Page
 img: assets/img/3.jpg
 importance: 2
 category: work
