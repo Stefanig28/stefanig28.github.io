@@ -11,15 +11,13 @@ featured: true
 
 Next, I’ll explain how I implemented a shopping cart in a project using the Shopify API.
 
-Step 1:
+Step 1: Creating the Cart
 
-I created a cart with a predefined variant and logged it in the console. 
-
-I started by calling the Shopify API using my `shopifyRequest()` function: para eso necesite configurar unos datos
+I started by creating a helper function called `shopifyRequest()` to handle all Shopify API calls. For that, I needed to configure some data such as the Shopify store domain, the storefront access token, and the API endpoint URL. 
 
 ```js
-const shopDomain = "bu1fib-rq.myshopify.com";
-const storefrontToken = "83e93e5462232411b85e227dad586a69";
+const shopDomain = "your-shop-name.myshopify.com";
+const storefrontToken = "your-storefront-access-token";
 const apiUrl = `https://${shopDomain}/api/2024-10/graphql.json`;
 
 async function shopifyRequest(query, variables = {}) {
@@ -37,14 +35,14 @@ async function shopifyRequest(query, variables = {}) {
 }
 ```
 
-defini la variante que voy a usar
+Once the request function was ready, I defined a product `variantId` that I wanted to use for testing.
 
 
 ```js
-const variantId = `gid://shopify/ProductVariant/46805481881826`;
+const variantId = "gid://shopify/ProductVariant/your-variant-id";
 ```
 
-Then, I created my `createCart()` function using GraphQL
+Then, I created my `createCart()` function using GraphQL, which sends a mutation to create a new cart with that predefined variant.
 
 ```js
 async function createCart() {
@@ -105,14 +103,14 @@ async function createCart() {
 }
 ```
 
-At the moment, my function prints two things to the console:
+At this stage, my function logs two things to the console:
    1. This logs the cart along with the message “Cart Created”.
 
       ```js
       console.log("Cart Created", cart);
       ```
 
-   2. This logs the Cart ID, which we’ll need later.
+   2. This prints the Cart ID, which will be useful later.
       ```js
       console.log("Cart ID:", cart.id);
       ```
@@ -123,15 +121,15 @@ Finally, I call the function:
 await createCart();
 ```
 
-Así quedaría el código completo:
+Here’s how the complete code would look:
 
 {% highlight js linenos %}
 
-const shopDomain = "bu1fib-rq.myshopify.com";
-const storefrontToken = "83e93e5462232411b85e227dad586a69";
+const shopDomain = "your-shop-name.myshopify.com";
+const storefrontToken = "your-storefront-access-token";
 const apiUrl = `https://${shopDomain}/api/2024-10/graphql.json`;
 
-const variantId = `gid://shopify/ProductVariant/46805481881826`;
+const variantId = "gid://shopify/ProductVariant/your-variant-id";
 
 async function shopifyRequest(query, variables = {}) {
   const response = await fetch(apiUrl, {
@@ -208,17 +206,16 @@ await createCart();
 
 {% endhighlight %}
 
-Y así se ve en mi cónsolaa
+And this is how it looks in my console:
 
 <div style="text-align: center;">
   <img width="800" alt="Shopify cart preview" src="https://github.com/user-attachments/assets/42088928-e9c1-4c5e-9020-96b309bf383b" />
 </div>
 
-Step 2:
+Step 2: Adding Items to the Cart
 
-Añade items al carrito
-
-Primero verificamos si el producto que vamos a añadir existe, para eso usamos una función que revise si hay en stock
+Before adding a product to the cart, I first check whether the variant exists and if it’s available for sale.
+To do this, I created a function called `checkVariantStock()`, which performs a GraphQL query to fetch information about a specific product variant.
 
 ```js
 async function checkVariantStock(variantId) {
@@ -266,7 +263,10 @@ async function checkVariantStock(variantId) {
 }
 ```
 
-Creamos la función para añadir un item al carrito 
+We create a function to add an item to the cart.
+
+The function `addItemToCart()` performs a GraphQL mutation called `cartLinesAdd`, which allows us to add one or more product variants to an existing cart.
+This mutation requires the cart ID, the product variant ID, and the quantity to add.
 
 ```js
 async function addItemToCart(cartId, variantId, quantity = 1) {
@@ -322,7 +322,10 @@ async function addItemToCart(cartId, variantId, quantity = 1) {
 }
 ```
 
-Ahora no vamos simplemente a llamar a la función, vamos a hacer algo un poco diferente, vamos a decir que cuando se cargue el dom creamos un carrito vacío, verificamos el stock dle producto que vamos a añadir llamando a nuestra función `checkVariantStock(variantId)` y por ultimo agregamos el producto al carrito. El código se vería de esta forma:
+Now we’re not just going to call the function directly we’ll do something a little different.
+When the DOM finishes loading, we’ll create an empty cart, check the stock availability of the product we want to add by calling our `checkVariantStock(variantId)` function, and finally, we’ll add the product to the cart.
+
+The code would look like this:
 
 ```js
 document.addEventListener("DOMContentLoaded", async () => {
@@ -332,14 +335,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 ```
 
-Así se vería el step 2
+This is how Step 2 would look:
 
 ```js
-const shopDomain = "bu1fib-rq.myshopify.com";
-const storefrontToken = "83e93e5462232411b85e227dad586a69";
+const shopDomain = "your-shop-name.myshopify.com";
+const storefrontToken = "your-storefront-access-token";
 const apiUrl = `https://${shopDomain}/api/2024-10/graphql.json`;
 
-const variantId = `gid://shopify/ProductVariant/46880650297570`;
+const variantId = "gid://shopify/ProductVariant/your-variant-id";
 
 async function shopifyRequest(query, variables = {}) {
   const response = await fetch(apiUrl, {
@@ -515,11 +518,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   <img width="800" alt="Screenshot 2025-09-26 at 3 07 20 PM" src="https://github.com/user-attachments/assets/0f11b6aa-f15c-48aa-a369-66477ce5ede6" />
 </div>
 
-Step 3:
+Step 3: In this step, we want the cart button to display a modal showing the item that was added.
 
-Este paso consiste en lograr que cuando le doy click al boton cart se despliegue un modal con el item agregado 
+At this point, we need to actually display the cart. Since `createCart()` only creates an empty cart, we have to fetch the current state of that cart. To do this, we’ll use a query that tells Shopify: “Show me the contents of the cart with this ID.”
 
-En este paso ya tenemos que mostrar el carrito, como createCart() crea un carrito vacío necesitamos consultar el estado actual de ese carrito y vamos a usar una query que le dice a Shopify "muestreme el contenido del carrito con este ID" yo lo hice de esta forma:
+Here’s how I implemented it:
 
 ```js
 async function getCart(cartId) {
@@ -575,10 +578,12 @@ async function getCart(cartId) {
 }
 ```
 
-Como dije anteriormente, hay que mostrar el carrito, mi página está (hecha o desplegada) en webflow entonces cree el modal añadiendo divs y desde settings le defini el ID, y para mostrarlo cree una función llamada showCart() 
+As mentioned earlier, we need to display the cart. My page is built on Webflow, so I created the modal by adding divs and assigning them an ID through the Settings panel. To display the modal, I created a function called `showCart()`.
 
-Explicaré que hice con está función paso a paso:
-   1. Primero obtuve el estado actual de mi carrito con la función creada previamente, tambien obtuve el modal del carrito que es dónde estara toda la información, cart Items container que es dónde se agregaran los items y un mensaje de vacío, tenemos que asegurarnos que tengamos todo definido ya sea desde el html o desde settings si estas usando webflow.
+Here’s a step by step explanation of what I did with this function:
+   1. First, I retrieved the current state of my cart using the function I created earlier.
+   I also selected the cart modal, which will contain all the information, the cart items container where the items will be added, and an empty message element.
+   It’s important to make sure all of these elements are properly defined either in your HTML or in the Webflow settings if you’re using it.
 
       ```js
       async function showCart(cartId) {
@@ -588,12 +593,12 @@ Explicaré que hice con está función paso a paso:
         const emptyCartMessage = document.getElementById('empty-cart-message');
       ```
 
-   2. Vaciamos el carrito 
+   2. Next, we clear the cart container to make sure it’s empty before rendering the updated items. This doesn’t remove products from the Shopify cart itself it only clears the cart’s visual content on the page so we can display the new data cleanly.
       ```js
         cartItemsContainer.innerHTML = '';
       ```
 
-   3. Si el carrito esta vacío mostramos nuestro mensaje de "No items found" si hay elementos este mensaje se oculta 
+   3. If the cart is empty, we display our “No items found” message; if there are items, this message is hidden.
       ```js
         if (!cart || !cart.lines || cart.lines.edges.length === 0) {
           emptyCartMessage.style.display = 'block';
@@ -603,7 +608,7 @@ Explicaré que hice con está función paso a paso:
         }
       ``` 
 
-   4. Aca hice un forEach para que itere por todos los items del carrito y los muestre
+   4. Here, I used a forEach loop to iterate through all the items in the cart and display them. For each item, I extracted details like the product title, variant title, quantity, price, and currency.
       ```js
         cart.lines.edges.forEach(edge => {
           const item = edge.node;
@@ -625,7 +630,7 @@ Explicaré que hice con está función paso a paso:
         });
       ```
 
-   5. Mostramos el total
+   5. Then, I calculated the total price, created a new div element for the item, and added it to the cart container.
       ```js
         const totalAmount = cart.cost.totalAmount.amount;
         const currency = cart.cost.totalAmount.currencyCode;
@@ -636,7 +641,7 @@ Explicaré que hice con está función paso a paso:
         cartItemsContainer.appendChild(totalDiv);
       ```
 
-   6. Y por ultimo mostramos el carrito
+   6. Finally, we display the cart. If the modal element exists, we set its display style to "flex" so it becomes visible. Otherwise, we log a warning message in case the element wasn’t found in the DOM.
       ```js
         if (cartModal) {
           cartModal.style.display = "flex";
@@ -646,7 +651,7 @@ Explicaré que hice con está función paso a paso:
       }
       ```
 
-Ahora adicional a lo que teniamos antes añadimos un addEventListener que se active cuando le de click al botón del carrito 
+Now, in addition to what we had before, we add an addEventListener that triggers when the cart button is clicked.
 
 ```js
 document.addEventListener("DOMContentLoaded", async () => {
@@ -660,15 +665,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 ```
 
-Y así se veria el paso 3 listo, está un poco feo pero lo iremos mejorando poco a poco
+And this is how Step 3 looks completed, it’s still a bit rough, but we’ll keep improving it step by step.
 
 <div style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 9 28 36 AM" src="https://github.com/user-attachments/assets/14ca3a4d-2abc-49a3-9254-044c0896f421" />
 </div>
 
-Step 4:
+Step 4: In this step, we’re going to add products to the cart using the “Add to Cart” button.
 
-En este paso vamos a añadir productos al carrito pero desde el boton de añadir al carrito, y para eso vamos añadir otro addEventListener pero que se active cuando haga click en añadir al carrito, y metemos nuestra función ahi adentro
+To do this, we’ll add another addEventListener that triggers when the button is clicked, and we’ll place our function inside it.
 
 ```js
 document.addEventListener("DOMContentLoaded", async () => {
@@ -688,23 +693,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 ```
-Le añadi un log para ver que lo añadió desde la consola y también le puse un titulo desde webflow para darle un poco más de estilo
+
+I added a console.log to see that the item was successfully added, and I also gave it a title from Webflow to add a bit more style.
 
 <div style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 2 44 10 PM" src="https://github.com/user-attachments/assets/945946f5-0a6e-4be8-a8b3-384c7106d3a0" />
 </div>
 
-Step 5:
+Step 5: In this step, we’ll add the product to the cart based on the variant associated with the button.
 
-En este paso vamos a añadir el producto al carrito segun la variante que tenga el boton 
-
-Debemos eliminar esta linea 
+First, we need to remove this line:
 
 ```js
 const variantId = `gid://shopify/ProductVariant/46880650297570`;
 ```
 
-Y añadimos este foreach que recorre todos los botones que tengan data-variant-id y cuando hago click obtiene la variante de ese botón 
+We then add this forEach loop that goes through all buttons with a data-variant-id attribute. When a button is clicked, it retrieves the variant ID from that button and adds the product to the cart:
 
 ```js
 const addToCartButtons = document.querySelectorAll('[data-variant-id]');
@@ -727,13 +731,11 @@ addToCartButtons.forEach(button => {
 });
 ```
 
-Y también reemplazamos addToCartBtn por addToCartButtons
+We also replace addToCartBtn with addToCartButtons to handle all buttons instead of just one.
 
-Step 6:
+Step 6: We add a toast notification to show a success message when a product is successfully added to the cart.
 
-Añade toast que muestre un mensaje de exito si se añadió correctamente al carrito
-
-Primero añadi mi función showtoast()
+First, I created my `showToast()` function.
 
 ```js
 function showToast(message, type = 'error') {
@@ -777,7 +779,7 @@ function showToast(message, type = 'error') {
 }
 ```
 
-Y después cambie un poco mi foreach, primero verifica si hay stock del producto, si no hay muestra un toast que dice "No stock available" y si se añade correctamente muestra un mensaje que dice "Product added successfully"
+Then, I modified my forEach loop slightly. First, it checks if the product is in stock. If not, it shows a toast message saying “No stock available”. If the product is successfully added, it displays a toast saying “Product added successfully.”
 
 ```js
 addToCartButtons.forEach(button => {
@@ -815,11 +817,11 @@ addToCartButtons.forEach(button => {
     </div>
 </div>
 
-Así va nuestro código hasta ahora
+Here’s how our code looks so far:
 
 {% highlight js linenos %}
-const shopDomain = "bu1fib-rq.myshopify.com";
-const storefrontToken = "83e93e5462232411b85e227dad586a69";
+const shopDomain = "your-shop-name.myshopify.com";
+const storefrontToken = "your-storefront-access-token";
 const apiUrl = `https://${shopDomain}/api/2024-10/graphql.json`;
 
 async function shopifyRequest(query, variables = {}) {
@@ -1226,24 +1228,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 {% endhighlight %}
 
-Le añadí también un poco de estilo a mi showCart()
+I also added some styling to my `showCart()` function.
 
 <div style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 5 16 02 PM" src="https://github.com/user-attachments/assets/7345d406-02ed-4652-bdd6-3c4c942f7610" />
 </div>
 
-Para la parte final me toco dividir el código en dos partes debido a webflow, una parte la puse en un code embed anidado al botón del carrito, y la otra parte se lo puse a un code embed recursivamente en una collection en los botones de compra en el catalogo de la página
+For the final part, I had to split the code into two sections because of Webflow. One part was placed in a code embed nested inside the cart button, and the other part was added in a recursive code embed within a collection for the “Add to Cart” buttons in the catalog on the page.
 
-Este es el código final del botón del carrito, acá de crea un carrito vacío y lo definimos de manera global con window para poder modificarlo en el otro código, también añadimos la lógica del botón de checkout y el cóntador que está en el botón del carrito.
+This is the final code for the cart button. Here, we create an empty cart and define it globally using window so it can be accessed and modified by the other code section. We also include the logic for the checkout button and the counter displayed on the cart button.
 
 {% highlight js linenos %}
 
 async function shopifyRequest(query, variables = {}) {
-  const response = await fetch("https://bu1fib-rq.myshopify.com/api/2024-10/graphql.json", {
+  const response = await fetch("https://${your-shop-name.myshopify.com}/api/2024-10/graphql.json", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": "83e93e5462232411b85e227dad586a69",
+      "X-Shopify-Storefront-Access-Token": "your-storefront-access-token",
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -1688,7 +1690,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 {% endhighlight %}
 
-Y en el embed del botón de compra está toda la logica para añadir un producto al carrito, también le añadí un setTimeout() para asegurarnos de que primero se cree el carrito y después le añadimos items
+And in the code embed for the “Add to Cart” button, all the logic for adding a product to the cart is included. I also added a setTimeout() to ensure that the cart is created first before we add items to it.
 
 {% highlight js linenos %}
 
@@ -1934,13 +1936,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 {% endhighlight %}
 
-Y después de unos cuantos retoques al diseño, este es el resultado final 
+And after a few design tweaks, this is the final result.
 
 <div class="row">
     <div class="col-sm mt-3 mt-md-0">
         {% include figure.liquid loading="eager" path="assets/img/1.jpg" title="example image" class="img-fluid rounded z-depth-1" %}
     </div>
-</div>
-<div class="caption">
-    This image can also have a caption. It's like magic.
 </div>
