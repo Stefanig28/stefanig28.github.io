@@ -519,5 +519,1428 @@ Step 3:
 
 Este paso consiste en lograr que cuando le doy click al boton cart se despliegue un modal con el item agregado 
 
+En este paso ya tenemos que mostrar el carrito, como createCart() crea un carrito vacío necesitamos consultar el estado actual de ese carrito y vamos a usar una query que le dice a Shopify "muestreme el contenido del carrito con este ID" yo lo hice de esta forma:
+
+```js
+async function getCart(cartId) {
+    const query = `
+      query GetCart($cartId: ID!) {
+        cart(id: $cartId) {
+          id
+          createdAt
+          updatedAt
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      title
+                    }
+                  }
+                }
+              }
+            }
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    `;
+    
+  const variables = { cartId };
+    
+  const result = await shopifyRequest(query, variables);
+  
+  if (result.errors) {
+    console.error("GraphQL errors:", result.errors);
+    throw new Error("Failed to fetch cart.");
+  }
+  
+  console.log("Get Cart", result.data.cart)
+  return result.data.cart;
+}
+```
+
+Como dije anteriormente, hay que mostrar el carrito, mi página está (hecha o desplegada) en webflow entonces cree el modal añadiendo divs y desde settings le defini el ID, y para mostrarlo cree una función llamada showCart() 
+
+Explicaré que hice con está función paso a paso:
+   1. Primero obtuve el estado actual de mi carrito con la función creada previamente, tambien obtuve el modal del carrito que es dónde estara toda la información, cart Items container que es dónde se agregaran los items y un mensaje de vacío, tenemos que asegurarnos que tengamos todo definido ya sea desde el html o desde settings si estas usando webflow.
+
+      ```js
+      async function showCart(cartId) {
+        const cart = await getCart(cartId);
+        const cartModal = document.getElementById('cart-modal');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const emptyCartMessage = document.getElementById('empty-cart-message');
+      ```
+
+   2. Vaciamos el carrito 
+      ```js
+        cartItemsContainer.innerHTML = '';
+      ```
+
+   3. Si el carrito esta vacío mostramos nuestro mensaje de "No items found" si hay elementos este mensaje se oculta 
+      ```js
+        if (!cart || !cart.lines || cart.lines.edges.length === 0) {
+          emptyCartMessage.style.display = 'block';
+          return;
+        } else {
+          emptyCartMessage.style.display = 'none';
+        }
+      ``` 
+
+   4. Aca hice un forEach para que itere por todos los items del carrito y los muestre
+      ```js
+        cart.lines.edges.forEach(edge => {
+          const item = edge.node;
+          const variant = item.merchandise;
+
+          const productTitle = variant.product?.title || 'Producto sin nombre';
+          const variantTitle = variant.title || '';
+          const quantity = item.quantity;
+          const price = parseFloat(variant.price.amount);
+          const currency = variant.price.currencyCode;
+          const total = (price * quantity).toFixed(2);
+
+          const listItem = document.createElement('div');
+          listItem.classList.add('cart-item');
+
+          listItem.textContent = `${productTitle} - ${variantTitle} | Cantidad: ${quantity} | Precio unitario: $${price} ${currency} | Total: $${total}`;
+
+          cartItemsContainer.appendChild(listItem);
+        });
+      ```
+
+   5. Mostramos el total
+      ```js
+        const totalAmount = cart.cost.totalAmount.amount;
+        const currency = cart.cost.totalAmount.currencyCode;
+
+        const totalDiv = document.createElement('div');
+        totalDiv.classList.add('cart-total');
+        totalDiv.textContent = `Total del carrito: $${totalAmount} ${currency}`;
+        cartItemsContainer.appendChild(totalDiv);
+      ```
+
+   6. Y por ultimo mostramos el carrito
+      ```js
+        if (cartModal) {
+          cartModal.style.display = "flex";
+        } else {
+          console.warn("cartList no encontrado en el DOM");
+        }
+      }
+      ```
+
+Ahora adicional a lo que teniamos antes añadimos un addEventListener que se active cuando le de click al botón del carrito 
+
+```js
+document.addEventListener("DOMContentLoaded", async () => {
+  const cartBtn = document.getElementById('cart-button');
+  const cartId = await createCart();
+  await checkVariantStock(variantId)
+  await addItemToCart(cartId, variantId, 1);
+  cartBtn.addEventListener('click', async () => {
+    showCart(cartId);
+    })
+});
+```
+
+Y así se veria el paso 3 listo, está un poco feo pero lo iremos mejorando poco a poco
+
+<div style="text-align: center;">
+  <img width="800" alt="Screenshot 2025-09-27 at 9 28 36 AM" src="https://github.com/user-attachments/assets/14ca3a4d-2abc-49a3-9254-044c0896f421" />
+</div>
+
+Step 4:
+
+En este paso vamos a añadir productos al carrito pero desde el boton de añadir al carrito, y para eso vamos añadir otro addEventListener pero que se active cuando haga click en añadir al carrito, y metemos nuestra función ahi adentro
+
+```js
+document.addEventListener("DOMContentLoaded", async () => {
+  const cartBtn = document.getElementById('cart-button');
+  const addToCartBtn = document.getElementById('add-to-cart-button');
+
+  const cartId = await createCart(); 
+  await checkVariantStock(variantId)
+
+  addToCartBtn.addEventListener('click', async () => {
+    await addItemToCart(cartId, variantId, 1);
+    console.log("Producto añadido");
+  });
+
+  cartBtn.addEventListener('click', async () => {
+    showCart(cartId);
+  });
+});
+```
+Le añadi un log para ver que lo añadió desde la consola y también le puse un titulo desde webflow para darle un poco más de estilo
+
+<div style="text-align: center;">
+  <img width="800" alt="Screenshot 2025-09-27 at 2 44 10 PM" src="https://github.com/user-attachments/assets/945946f5-0a6e-4be8-a8b3-384c7106d3a0" />
+</div>
+
+Step 5:
+
+En este paso vamos a añadir el producto al carrito segun la variante que tenga el boton 
+
+Debemos eliminar esta linea 
+
+```js
+const variantId = `gid://shopify/ProductVariant/46880650297570`;
+```
+
+Y añadimos este foreach que recorre todos los botones que tengan data-variant-id y cuando hago click obtiene la variante de ese botón 
+
+```js
+const addToCartButtons = document.querySelectorAll('[data-variant-id]');
+
+addToCartButtons.forEach(button => {
+  button.addEventListener('click', async () => {
+    const variantId = button.getAttribute('data-variant-id');
+    if (!variantId) {
+      console.error("Variant ID no encontrado en el botón");
+      return;
+    }
+
+    try {
+      await addItemToCart(cartId, variantId, 1);
+      console.log("Producto añadido al carrito");
+    } catch (e) {
+      console.error("Error al añadir producto:", e);
+    }
+  });
+});
+```
+
+Y también reemplazamos addToCartBtn por addToCartButtons
+
+Step 6:
+
+Añade toast que muestre un mensaje de exito si se añadió correctamente al carrito
+
+Primero añadi mi función showtoast()
+
+```js
+function showToast(message, type = 'error') {
+  const existingToast = document.getElementById('toast-notification');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.id = 'toast-notification';
+  toast.textContent = message;
+
+  toast.style.position = 'fixed';
+  toast.style.top = '30px';
+  toast.style.right = '30px';
+  toast.style.padding = '14px 20px';
+  toast.style.backgroundColor = type === 'error' ? '#ff4d4f' : '#4caf50';
+  toast.style.color = '#fff';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+  toast.style.fontSize = '16px';
+  toast.style.zIndex = '9999';
+  toast.style.opacity = '0';
+  toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  toast.style.transform = 'translateY(20px)';
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      toast.remove();
+    }, 400);
+  }, 3000);
+}
+```
+
+Y después cambie un poco mi foreach, primero verifica si hay stock del producto, si no hay muestra un toast que dice "No stock available" y si se añade correctamente muestra un mensaje que dice "Product added successfully"
+
+```js
+addToCartButtons.forEach(button => {
+  button.addEventListener('click', async () => {
+    const variantId = button.getAttribute('data-variant-id');
+    if (!variantId) {
+      console.error("Variant ID no encontrado en el botón");
+      return;
+    }
+
+    try {
+      const stock = await checkVariantStock(variantId);
+
+      if (!stock || stock.quantityAvailable <= 0 || !stock.availableForSale) {
+        showToast("No stock available");
+        return;
+      }
+
+      await addItemToCart(cartId, variantId, 1);
+      showToast("Product added successfully", "success");
+    } catch (e) {
+      console.error("Error al añadir producto:", e);
+      showToast("Error checking stock.");
+    }
+  });
+});
+```
+
+<div style="text-align: center;">
+    <div class="col-sm mt-3 mt-md-0">
+      <img width="800" alt="Screenshot 2025-09-27 at 4 12 21 PM" src="https://github.com/user-attachments/assets/9a6b7720-c626-40fc-b76f-a93550494ba2" />
+    </div>
+    <div class="col-sm mt-3 mt-md-0">
+      <img width="800" alt="Screenshot 2025-09-27 at 3 54 47 PM" src="https://github.com/user-attachments/assets/f076fa65-50bb-4dcd-946f-e00faf5f14cc" />
+    </div>
+</div>
+
+Así va nuestro código hasta ahora
+
+{% highlight js linenos %}
+const shopDomain = "bu1fib-rq.myshopify.com";
+const storefrontToken = "83e93e5462232411b85e227dad586a69";
+const apiUrl = `https://${shopDomain}/api/2024-10/graphql.json`;
+
+async function shopifyRequest(query, variables = {}) {
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": storefrontToken,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+async function createCart() {
+  const mutation = `
+    mutation CreateCart($input: CartInput!) {
+      cartCreate(input: $input) {
+        cart {
+          id
+          createdAt
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+  
+  const variables = {
+    input: {} 
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartCreate.userErrors.length > 0) {
+    console.error("GraphQL Errors:", result.errors || result.data.cartCreate.userErrors);
+    throw new Error("Failed to create cart");
+  }
+
+  const cart = result.data.cartCreate.cart;
+  console.log("Cart ID:", cart.id);
+  
+  return cart.id
+}
+
+async function getCart(cartId) {
+    const query = `
+      query GetCart($cartId: ID!) {
+        cart(id: $cartId) {
+          id
+          createdAt
+          updatedAt
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      title
+                      featuredImage {
+                        url
+                        altText
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    `;
+    
+  const variables = { cartId };
+    
+  const result = await shopifyRequest(query, variables);
+  
+  if (result.errors) {
+    console.error("GraphQL errors:", result.errors);
+    throw new Error("Failed to fetch cart.");
+  }
+  
+  console.log("Get Cart", result.data.cart)
+  return result.data.cart;
+}
+
+async function addItemToCart(cartId, variantId, quantity = 1) {
+  const mutation = `
+    mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+      cartLinesAdd(cartId: $cartId, lines: $lines) {
+        cart {
+          id
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId,
+    lines: [
+      {
+        merchandiseId: variantId,
+        quantity
+      }
+    ]
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartLinesAdd.userErrors.length > 0) {
+    console.error("GraphQL Errors:", result.errors || result.data.cartLinesAdd.userErrors);
+    throw new Error("Failed to add item to cart");
+  }
+  
+  const updatedCart = result.data.cartLinesAdd.cart;
+  console.log("Item added to cart", updatedCart);
+  return updatedCart;
+}
+
+async function checkVariantStock(variantId) {
+  const query = `
+    query VariantStockCheck($id: ID!) {
+      node(id: $id) {
+        ... on ProductVariant {
+          id
+          title
+          availableForSale
+          quantityAvailable
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    id: variantId
+  };
+
+  const response = await shopifyRequest(query, variables);
+
+  if (response.errors) {
+    console.error("GraphQL Errors:", response.errors);
+    throw new Error("Failed to fetch variant stock");
+  }
+
+  const variant = response.data.node;
+
+  if (!variant) {
+    console.warn("Variant not found");
+    return null;
+  }
+
+  console.log(`Variant: ${variant.title}`);
+  console.log(`Available for sale: ${variant.availableForSale}`);
+  console.log(`Quantity available: ${variant.quantityAvailable}`);
+
+  return {
+    id: variant.id,
+    title: variant.title,
+    availableForSale: variant.availableForSale,
+    quantityAvailable: variant.quantityAvailable
+  };
+}
+
+function showToast(message, type = 'error') {
+  const existingToast = document.getElementById('toast-notification');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.id = 'toast-notification';
+  toast.textContent = message;
+
+  toast.style.position = 'fixed';
+  toast.style.top = '30px';
+  toast.style.right = '30px';
+  toast.style.padding = '14px 20px';
+  toast.style.backgroundColor = type === 'error' ? '#ff4d4f' : '#4caf50';
+  toast.style.color = '#fff';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+  toast.style.fontSize = '16px';
+  toast.style.zIndex = '9999';
+  toast.style.opacity = '0';
+  toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  toast.style.transform = 'translateY(20px)';
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      toast.remove();
+    }, 400);
+  }, 3000);
+}
+
+async function showCart(cartId) {
+  const cart = await getCart(cartId);
+  const cartModal = document.getElementById('cart-modal');
+  const cartItemsContainer = document.getElementById('cart-items');
+  const emptyCartMessage = document.getElementById('empty-cart-message');
+
+  cartItemsContainer.innerHTML = '';
+
+  if (!cart || !cart.lines || cart.lines.edges.length === 0) {
+    emptyCartMessage.style.display = 'block';
+    return;
+  } else {
+    emptyCartMessage.style.display = 'none';
+  }
+
+  cart.lines.edges.forEach(edge => {
+    const item = edge.node;
+    const variant = item.merchandise;
+    const product = variant.product;
+
+    const productTitle = product?.title || 'Producto sin nombre';
+    const variantTitle = variant.title || '';
+    const quantity = item.quantity;
+    const price = parseFloat(variant.price.amount);
+    const currency = variant.price.currencyCode;
+    const total = (price * quantity).toFixed(2);
+    const imageUrl = product?.featuredImage?.url || '';
+    const altText = product?.featuredImage?.altText || productTitle;
+
+    const listItem = document.createElement('div');
+    listItem.style.display = 'flex';
+    listItem.style.gap = '15px';
+    listItem.style.padding = '12px';
+    listItem.style.borderBottom = '1px solid #eee';
+    listItem.style.alignItems = 'center';
+
+    if (imageUrl) {
+      const imageDiv = document.createElement('div');
+      const img = document.createElement('img');
+      img.src = imageUrl;
+      img.alt = altText;
+      img.style.width = '80px';
+      img.style.height = '80px';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = '6px';
+      imageDiv.appendChild(img);
+      listItem.appendChild(imageDiv);
+    }
+
+    const detailsDiv = document.createElement('div');
+    detailsDiv.style.display = 'flex';
+    detailsDiv.style.flexDirection = 'column';
+    detailsDiv.style.gap = '4px';
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = productTitle;
+    titleEl.style.fontWeight = 'bold';
+    titleEl.style.fontSize = '16px';
+
+    const variantEl = document.createElement('div');
+    variantEl.textContent = variantTitle;
+    variantEl.style.fontSize = '14px';
+    variantEl.style.color = '#555';
+
+    const quantityEl = document.createElement('div');
+    quantityEl.textContent = `Cantidad: ${quantity}`;
+    quantityEl.style.fontSize = '14px';
+
+    const priceEl = document.createElement('div');
+    priceEl.textContent = `Precio unitario: $${price} ${currency}`;
+    priceEl.style.fontSize = '14px';
+
+    const totalEl = document.createElement('div');
+    totalEl.textContent = `Total: $${total} ${currency}`;
+    totalEl.style.fontSize = '14px';
+
+    detailsDiv.appendChild(titleEl);
+    detailsDiv.appendChild(variantEl);
+    detailsDiv.appendChild(quantityEl);
+    detailsDiv.appendChild(priceEl);
+    detailsDiv.appendChild(totalEl);
+
+    listItem.appendChild(detailsDiv);
+    cartItemsContainer.appendChild(listItem);
+  });
+
+  const totalAmount = cart.cost.totalAmount.amount;
+  const currency = cart.cost.totalAmount.currencyCode;
+
+  const totalDiv = document.createElement('div');
+  totalDiv.textContent = `Total del carrito: $${totalAmount} ${currency}`;
+  totalDiv.style.fontWeight = 'bold';
+  totalDiv.style.fontSize = '18px';
+  totalDiv.style.marginTop = '24px';
+  totalDiv.style.paddingTop = '12px';
+  totalDiv.style.borderTop = '1px solid #ddd';
+  totalDiv.style.textAlign = 'center';
+
+  cartItemsContainer.appendChild(totalDiv);
+
+  if (cartModal) {
+    cartModal.style.display = "flex";
+  } else {
+    console.warn("cart-modal no encontrado en el DOM");
+  }
+}
 
 
+document.addEventListener("DOMContentLoaded", async () => {
+  const cartBtn = document.getElementById('cart-button');
+  const addToCartButtons = document.querySelectorAll('[data-variant-id]');
+
+  const cartId = await createCart(); 
+
+  addToCartButtons.forEach(button => {
+    button.addEventListener('click', async () => {
+      const variantId = button.getAttribute('data-variant-id');
+      if (!variantId) {
+        console.error("Variant ID no encontrado en el botón");
+        return;
+      }
+
+      try {
+        const stock = await checkVariantStock(variantId);
+
+        if (!stock || stock.quantityAvailable <= 0 || !stock.availableForSale) {
+          showToast("No stock available");
+          return;
+        }
+
+        await addItemToCart(cartId, variantId, 1);
+        showToast("Product added successfully", "success");
+      } catch (e) {
+        console.error("Error al añadir producto:", e);
+        showToast("Error checking stock.");
+      }
+    });
+  });
+
+
+  cartBtn.addEventListener('click', async () => {
+    showCart(cartId);
+  });
+});
+
+{% endhighlight %}
+
+Le añadí también un poco de estilo a mi showCart()
+
+<div style="text-align: center;">
+  <img width="800" alt="Screenshot 2025-09-27 at 5 16 02 PM" src="https://github.com/user-attachments/assets/7345d406-02ed-4652-bdd6-3c4c942f7610" />
+</div>
+
+Para la parte final me toco dividir el código en dos partes debido a webflow, una parte la puse en un code embed anidado al botón del carrito, y la otra parte se lo puse a un code embed recursivamente en una collection en los botones de compra en el catalogo de la página
+
+Este es el código final del botón del carrito, acá de crea un carrito vacío y lo definimos de manera global con window para poder modificarlo en el otro código, también añadimos la lógica del botón de checkout y el cóntador que está en el botón del carrito.
+
+{% highlight js linenos %}
+
+async function shopifyRequest(query, variables = {}) {
+  const response = await fetch("https://bu1fib-rq.myshopify.com/api/2024-10/graphql.json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": "83e93e5462232411b85e227dad586a69",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+async function createCart() {
+  const mutation = `
+    mutation CreateCart($input: CartInput!) {
+      cartCreate(input: $input) {
+        cart {
+          id
+          checkoutUrl
+          createdAt
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+  
+  const variables = {
+    input: {} 
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartCreate.userErrors.length > 0) {
+    console.error("GraphQL Errors:", result.errors || result.data.cartCreate.userErrors);
+    throw new Error("Failed to create cart");
+  }
+  
+  const cart = result.data.cartCreate.cart;
+  const checkoutUrl = cart.checkoutUrl;
+  
+  return {id: cart.id, checkoutUrl : checkoutUrl}
+}
+
+async function getCart(cartId) {
+    const query = `
+      query GetCart($cartId: ID!) {
+        cart(id: $cartId) {
+          id
+          createdAt
+          updatedAt
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      title
+                      featuredImage {
+                        url
+                        altText
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    `;
+    
+  const variables = { cartId };
+    
+  const result = await shopifyRequest(query, variables);
+  
+  if (result.errors) {
+    console.error("GraphQL errors:", result.errors);
+    throw new Error("Failed to fetch cart.");
+  }
+  
+  console.log("Get Cart", result.data.cart)
+  return result.data.cart;
+}
+
+async function showCart(cartId) {
+  const cart = await getCart(cartId);
+  const cartModal = document.getElementById('cart-modal');
+  
+  const cartItemsContainer = document.getElementById('cart-items');
+  cartItemsContainer.style.display = 'flex';
+  cartItemsContainer.style.flexDirection = 'column';
+  cartItemsContainer.style.maxHeight = '400px';
+  cartItemsContainer.style.overflowY = 'auto';
+  cartItemsContainer.style.overflowX = 'hidden';
+  
+  const emptyCartMessage = document.getElementById('empty-cart-message');
+
+  cartItemsContainer.innerHTML = '';
+  
+  if (!cart || !cart.lines || cart.lines.edges.length === 0) {
+    cartModal.style.display = "flex";
+
+    const cartTotalDiv = document.getElementById('cart-total');
+    if (cartTotalDiv) {
+      cartTotalDiv.textContent = '';
+      cartTotalDiv.style.display = 'none';
+    }
+
+    emptyCartMessage.style.display = 'block';
+    return;
+  } else {
+    emptyCartMessage.style.display = 'none';
+  }
+
+  cart.lines.edges.forEach(edge => {
+    const item = edge.node;
+    const variant = item.merchandise;
+    const product = variant.product;
+
+    const productTitle = product?.title || 'Producto sin nombre';
+    const variantTitle = variant.title || '';
+    const quantity = item.quantity;
+    const price = parseFloat(variant.price.amount);
+    const currency = variant.price.currencyCode;
+    const total = (price * quantity).toFixed(2);
+    const imageUrl = product?.featuredImage?.url || '';
+    const altText = product?.featuredImage?.altText || productTitle;
+
+    const listItem = document.createElement('div');
+    listItem.style.display = 'flex';
+    listItem.style.gap = '15px';
+    listItem.style.padding = '12px';
+    listItem.style.borderBottom = '1px solid #eee';
+    listItem.style.alignItems = 'center';
+
+    if (imageUrl) {
+      const imageDiv = document.createElement('div');
+      const img = document.createElement('img');
+      img.src = imageUrl;
+      img.alt = altText;
+      img.style.width = '80px';
+      img.style.height = '80px';
+      img.style.objectFit = 'cover';
+      img.style.borderRadius = '6px';
+      imageDiv.appendChild(img);
+      listItem.appendChild(imageDiv);
+    }
+
+    const detailsDiv = document.createElement('div');
+    detailsDiv.style.display = 'flex';
+    detailsDiv.style.flexDirection = 'column';
+    detailsDiv.style.gap = '4px';
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = productTitle;
+    titleEl.style.fontWeight = 'bold';
+    titleEl.style.fontSize = '16px';
+
+    const variantEl = document.createElement('div');
+    variantEl.textContent = variantTitle;
+    variantEl.style.fontSize = '14px';
+    variantEl.style.color = '#555';
+
+    const quantityWrapper = document.createElement('div');
+    quantityWrapper.style.display = 'flex';
+    quantityWrapper.style.alignItems = 'center';
+    quantityWrapper.style.gap = '8px';
+
+    const minusBtn = document.createElement('button');
+    minusBtn.textContent = '-';
+    minusBtn.style.width = '24px';
+    minusBtn.style.height = '24px';
+    minusBtn.style.cursor = 'pointer';
+    minusBtn.style.fontSize = '16px';
+
+    const quantityDisplay = document.createElement('span');
+    quantityDisplay.textContent = quantity;
+    quantityDisplay.style.fontSize = '14px';
+    quantityDisplay.style.minWidth = '20px';
+    quantityDisplay.style.textAlign = 'center';
+
+    const plusBtn = document.createElement('button');
+    plusBtn.textContent = '+';
+    plusBtn.style.width = '24px';
+    plusBtn.style.height = '24px';
+    plusBtn.style.cursor = 'pointer';
+    plusBtn.style.fontSize = '16px';
+
+    quantityWrapper.appendChild(minusBtn);
+    quantityWrapper.appendChild(quantityDisplay);
+    quantityWrapper.appendChild(plusBtn);
+
+    minusBtn.addEventListener('click', async () => {
+      const newQuantity = item.quantity - 1;
+
+      try {
+        if (newQuantity === 0) {
+          const updatedCart = await removeCartLine(cart.id, item.id);
+          updateCartCounter(updatedCart.totalQuantity);
+          showCart(cart.id);
+        } else {
+          const updatedCart = await updateCartLineQuantity(cart.id, item.id, newQuantity);
+          updateCartCounter(updatedCart.totalQuantity);
+          showCart(cart.id);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    plusBtn.addEventListener('click', async () => {
+      try {
+        const variantStock = await checkVariantStock(variant.id);
+        const available = variantStock?.quantityAvailable || 0;
+        const newQuantity = item.quantity + 1;
+
+        if (newQuantity > available) {
+          alert(`Only ${available} unit${available === 1 ? '' : 's'} available in stock`);
+          return;
+        }
+
+        const updatedCart = await updateCartLineQuantity(cart.id, item.id, newQuantity);
+        updateCartCounter(updatedCart.totalQuantity);
+        showCart(cart.id); 
+      } catch (err) {
+        console.error(err);
+      }
+    });
+    
+    const priceEl = document.createElement('div');
+    priceEl.textContent = `Precio unitario: $${price} ${currency}`;
+    priceEl.style.fontSize = '14px';
+
+    detailsDiv.appendChild(titleEl);
+    detailsDiv.appendChild(variantEl);
+    detailsDiv.appendChild(priceEl);
+    detailsDiv.appendChild(quantityWrapper);
+
+    listItem.appendChild(detailsDiv);
+    cartItemsContainer.appendChild(listItem);
+  });
+
+  const totalAmount = cart.cost.totalAmount.amount;
+  const currency = cart.cost.totalAmount.currencyCode;
+  
+  const cartTotalDiv = document.getElementById('cart-total');
+
+  if (cartTotalDiv) {
+    cartTotalDiv.textContent = `Total del carrito: $${totalAmount} ${currency}`;
+    cartTotalDiv.style.display = 'block';
+    cartTotalDiv.style.fontWeight = 'bold';
+    cartTotalDiv.style.fontSize = '18px';
+    cartTotalDiv.style.marginTop = '24px';
+    cartTotalDiv.style.paddingTop = '12px';
+    cartTotalDiv.style.borderTop = '1px solid #ddd';
+    cartTotalDiv.style.textAlign = 'center';
+  } else {
+    console.warn("No se encontró el div con id 'cart-total'");
+  }
+
+  if (cartModal) {
+    cartModal.style.display = "flex";
+  } else {
+    console.warn("cart-modal no encontrado en el DOM");
+  }
+}
+
+function updateCartCounter(count) {
+  const counterEl = document.getElementById('cart-counter');
+  counterEl.textContent = count;
+}
+
+async function updateCartLineQuantity(cartId, lineId, newQuantity) {
+  const mutation = `
+    mutation CartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
+      cartLinesUpdate(cartId: $cartId, lines: $lines) {
+        cart {
+          id
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId,
+    lines: [
+      {
+        id: lineId,
+        quantity: newQuantity
+      }
+    ]
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartLinesUpdate.userErrors.length > 0) {
+    console.error("Error al actualizar línea:", result.errors || result.data.cartLinesUpdate.userErrors);
+    throw new Error("Error al actualizar cantidad en carrito");
+  }
+
+  return result.data.cartLinesUpdate.cart;
+}
+
+async function removeCartLine(cartId, lineId) {
+  const mutation = `
+    mutation CartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
+      cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+        cart {
+          id
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId,
+    lineIds: [lineId]
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartLinesRemove.userErrors.length > 0) {
+    console.error("Error al eliminar línea:", result.errors || result.data.cartLinesRemove.userErrors);
+    throw new Error("Error al eliminar producto del carrito");
+  }
+
+  return result.data.cartLinesRemove.cart;
+}
+
+
+async function checkVariantStock(variantId) {
+  const query = `
+    query VariantStockCheck($id: ID!) {
+      node(id: $id) {
+        ... on ProductVariant {
+          id
+          title
+          availableForSale
+          quantityAvailable
+        }
+      }
+    }
+  `;
+
+  const variables = { id: variantId };
+
+  const result = await shopifyRequest(query, variables);
+
+  if (result.errors) {
+    console.error("Error al obtener stock:", result.errors);
+    return null;
+  }
+
+  return result.data.node;
+}
+
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const cartInfo = await createCart();
+  const cartId = cartInfo.id
+  const checkoutUrl = cartInfo.checkoutUrl
+  window.cartId = cartId;
+  console.log("cartId", cartId);
+  updateCartCounter(0)
+  
+  const cartBtn = document.getElementById('cart-button');
+  const checkoutBtn = document.getElementById('checkout-button');
+
+  cartBtn.addEventListener('click', async () => {
+    showCart(cartId);
+  });
+  
+  checkoutBtn.addEventListener('click', () => {
+    window.location.href = checkoutUrl; 
+  });
+  
+});
+
+{% endhighlight %}
+
+Y en el embed del botón de compra está toda la logica para añadir un producto al carrito, también le añadí un setTimeout() para asegurarnos de que primero se cree el carrito y después le añadimos items
+
+{% highlight js linenos %}
+
+<div  
+class="buy-button"
+id="buy-button-{{ page.variant_id }}"
+><p>Buy from {{ page.roaster_name }}</p>
+</div>
+
+async function shopifyRequest(query, variables = {}) {
+  const response = await fetch("https://bu1fib-rq.myshopify.com/api/2024-10/graphql.json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": "83e93e5462232411b85e227dad586a69",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json();
+  return data;
+}
+
+async function addItemToCart(cartId, variantId, quantity = 1) {
+
+  const mutation = `
+    mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
+      cartLinesAdd(cartId: $cartId, lines: $lines) {
+        cart {
+          id
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                  }
+                }
+              }
+            }
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    cartId,
+    lines: [
+      {
+        merchandiseId: `gid://shopify/ProductVariant/${variantId}`,
+        quantity
+      }
+    ]
+  };
+
+  const result = await shopifyRequest(mutation, variables);
+
+  if (result.errors || result.data.cartLinesAdd.userErrors.length > 0) {
+    console.error("GraphQL Errors:", result.errors || result.data.cartLinesAdd.userErrors);
+    throw new Error("Failed to add item to cart");
+  }
+  
+  const updatedCart = result.data.cartLinesAdd.cart;
+  console.log("Item added to cart", updatedCart);
+  return updatedCart.totalQuantity;
+}
+
+async function getTotalCount(cartId) {
+    const query = `
+      query GetCart($cartId: ID!) {
+        cart(id: $cartId) {
+          id
+          createdAt
+          updatedAt
+          totalQuantity
+          lines(first: 10) {
+            edges {
+              node {
+                id
+                quantity
+                merchandise {
+                  ... on ProductVariant {
+                    id
+                    title
+                    price {
+                      amount
+                      currencyCode
+                    }
+                    product {
+                      title
+                      featuredImage {
+                        url
+                        altText
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+    `;
+    
+  const variables = { cartId };
+    
+  const result = await shopifyRequest(query, variables);
+  
+  if (result.errors) {
+    console.error("GraphQL errors:", result.errors);
+    throw new Error("Failed to fetch cart.");
+  }
+  
+  console.log("Get Cart", result.data.cart)
+  return result.data.cart.totalQuantity;
+}
+
+function showToast(message, type = 'error') {
+  const existingToast = document.getElementById('toast-notification');
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.id = 'toast-notification';
+  toast.textContent = message;
+
+  toast.style.position = 'fixed';
+  toast.style.top = '30px';
+  toast.style.right = '30px';
+  toast.style.padding = '14px 20px';
+  toast.style.backgroundColor = type === 'error' ? '#ff4d4f' : '#4caf50';
+  toast.style.color = '#fff';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+  toast.style.fontSize = '16px';
+  toast.style.zIndex = '9999';
+  toast.style.opacity = '0';
+  toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+  toast.style.transform = 'translateY(20px)';
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+      toast.remove();
+    }, 400);
+  }, 3000);
+}
+
+function updateCartCounter(count) {
+  const counterEl = document.getElementById('cart-counter');
+  counterEl.textContent = count;
+}
+
+async function checkVariantStock(variantId) {
+  const query = `
+    query VariantStockCheck($id: ID!) {
+      node(id: $id) {
+        ... on ProductVariant {
+          id
+          title
+          availableForSale
+          quantityAvailable
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    id: variantId
+  };
+
+  const response = await shopifyRequest(query, variables);
+
+  if (response.errors) {
+    console.error("GraphQL Errors:", response.errors);
+    throw new Error("Failed to fetch variant stock");
+  }
+
+  const variant = response.data.node;
+
+  if (!variant) {
+    console.warn("Variant not found");
+    return null;
+  }
+
+  console.log(`Variant: ${variant.title}`);
+  console.log(`Available for sale: ${variant.availableForSale}`);
+  console.log(`Quantity available: ${variant.quantityAvailable}`);
+
+  return {
+    id: variant.id,
+    title: variant.title,
+    availableForSale: variant.availableForSale,
+    quantityAvailable: variant.quantityAvailable
+  };
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  setTimeout( async () => {
+    updateCartCounter(0)
+    console.log("Hey this is cart id", window.cartId);
+
+    const buyButton = document.getElementById(`buy-button-{{ page.variant_id }}`);
+
+    buyButton.addEventListener('click', async () => {
+      const stock = await checkVariantStock(`gid://shopify/ProductVariant/{{ page.variant_id }}`);
+        if (!stock || stock.quantityAvailable === 0 || stock.availableForSale === false) {
+          showToast("Not enough stock for product");
+          return;
+        } 
+      showToast("Product added successfully", "success");
+      const totalCount = await addItemToCart(window.cartId, `{{ page.variant_id }}`, 1);
+      updateCartCounter(totalCount);
+
+    });
+
+  }, 2000); 
+});
+
+{% endhighlight %}
+
+Y después de unos cuantos retoques al diseño, este es el resultado final 
+
+<div class="row">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/img/1.jpg" title="example image" class="img-fluid rounded z-depth-1" %}
+    </div>
+</div>
+<div class="caption">
+    This image can also have a caption. It's like magic.
+</div>
