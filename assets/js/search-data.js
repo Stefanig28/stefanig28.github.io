@@ -17,18 +17,18 @@ ninja.data = [{
             window.location.href = "/blog/";
           },
         },{id: "nav-projects",
-          title: "Projects",
+          title: "projects",
           description: "where code meets creation.",
           section: "Navigation",
           handler: () => {
             window.location.href = "/projects/";
           },
-        },{id: "dropdown-bookshelf",
-              title: "bookshelf",
+        },{id: "dropdown-projects",
+              title: "projects",
               description: "",
               section: "Dropdown",
               handler: () => {
-                window.location.href = "/books/";
+                window.location.href = "/projects/";
               },
             },{id: "dropdown-blog",
               title: "blog",
