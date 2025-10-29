@@ -11,7 +11,7 @@ featured: true
 
 Next, I’ll explain how I implemented a shopping cart in a project using the Shopify API.
 
-Step 1: Creating the Cart
+### Step 1: Creating the Cart
 
 I started by creating a helper function called `shopifyRequest()` to handle all Shopify API calls. For that, I needed to configure some data such as the Shopify store domain, the storefront access token, and the API endpoint URL. 
 
@@ -208,11 +208,11 @@ await createCart();
 
 And this is how it looks in my console:
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
   <img width="800" alt="Shopify cart preview" src="https://github.com/user-attachments/assets/42088928-e9c1-4c5e-9020-96b309bf383b" />
 </div>
 
-Step 2: Adding Items to the Cart
+### Step 2: Adding Items to the Cart
 
 Before adding a product to the cart, I first check whether the variant exists and if it’s available for sale.
 To do this, I created a function called `checkVariantStock()`, which performs a GraphQL query to fetch information about a specific product variant.
@@ -514,11 +514,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 ```
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-26 at 3 07 20 PM" src="https://github.com/user-attachments/assets/0f11b6aa-f15c-48aa-a369-66477ce5ede6" />
 </div>
 
-Step 3: In this step, we want the cart button to display a modal showing the item that was added.
+### Step 3: In this step, we want the cart button to display a modal showing the item that was added.
 
 At this point, we need to actually display the cart. Since `createCart()` only creates an empty cart, we have to fetch the current state of that cart. To do this, we’ll use a query that tells Shopify: “Show me the contents of the cart with this ID.”
 
@@ -667,11 +667,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 And this is how Step 3 looks completed, it’s still a bit rough, but we’ll keep improving it step by step.
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 9 28 36 AM" src="https://github.com/user-attachments/assets/14ca3a4d-2abc-49a3-9254-044c0896f421" />
 </div>
 
-Step 4: In this step, we’re going to add products to the cart using the “Add to Cart” button.
+### Step 4: In this step, we’re going to add products to the cart using the “Add to Cart” button.
 
 To do this, we’ll add another addEventListener that triggers when the button is clicked, and we’ll place our function inside it.
 
@@ -696,11 +696,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 I added a console.log to see that the item was successfully added, and I also gave it a title from Webflow to add a bit more style.
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 2 44 10 PM" src="https://github.com/user-attachments/assets/945946f5-0a6e-4be8-a8b3-384c7106d3a0" />
 </div>
 
-Step 5: In this step, we’ll add the product to the cart based on the variant associated with the button.
+### Step 5: In this step, we’ll add the product to the cart based on the variant associated with the button.
 
 First, we need to remove this line:
 
@@ -733,7 +733,7 @@ addToCartButtons.forEach(button => {
 
 We also replace addToCartBtn with addToCartButtons to handle all buttons instead of just one.
 
-Step 6: We add a toast notification to show a success message when a product is successfully added to the cart.
+### Step 6: We add a toast notification to show a success message when a product is successfully added to the cart.
 
 First, I created my `showToast()` function.
 
@@ -808,7 +808,7 @@ addToCartButtons.forEach(button => {
 });
 ```
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
     <div class="col-sm mt-3 mt-md-0">
       <img width="800" alt="Screenshot 2025-09-27 at 4 12 21 PM" src="https://github.com/user-attachments/assets/9a6b7720-c626-40fc-b76f-a93550494ba2" />
     </div>
@@ -1230,7 +1230,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 I also added some styling to my `showCart()` function.
 
-<div style="text-align: center;">
+<div class="mt-5 mb-5" style="text-align: center;">
   <img width="800" alt="Screenshot 2025-09-27 at 5 16 02 PM" src="https://github.com/user-attachments/assets/7345d406-02ed-4652-bdd6-3c4c942f7610" />
 </div>
 
@@ -1938,8 +1938,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 And after a few design tweaks, this is the final result.
 
-<div class="row">
+<div class="row mt-5 mb-5">
     <div class="col-sm mt-3 mt-md-0">
-        {% include figure.liquid loading="eager" path="assets/img/1.jpg" title="example image" class="img-fluid rounded z-depth-1" %}
+        {% include figure.liquid loading="eager" path="assets/img/14.jpg" title="example image" class="img-fluid rounded z-depth-1" %}
     </div>
 </div>
