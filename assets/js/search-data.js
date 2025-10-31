@@ -37,7 +37,18 @@ ninja.data = [{
               handler: () => {
                 window.location.href = "/blog/";
               },
-            },{id: "post-how-i-implemented-a-shopping-cart-step-by-step",
+            },{id: "post-rules-of-the-game-galactic-syndicate",
+        
+          title: "rules of the game Galactic Syndicate",
+        
+        description: "in this section, I designed the rules for my game Galactic Syndicate.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2025/galactic-syndicate-rules/";
+          
+        },
+      },{id: "post-how-i-implemented-a-shopping-cart-step-by-step",
         
           title: "How I Implemented a Shopping Cart Step by Step",
         
