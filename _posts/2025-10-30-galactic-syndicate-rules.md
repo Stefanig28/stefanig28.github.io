@@ -5,7 +5,7 @@ date: 2025-10-30 07:01:00
 description: in this section, I designed the rules for my game Galactic Syndicate.
 tags: formatting images game
 categories: posts
-thumbnail: assets/img/9.jpg
+thumbnail: assets/img/galactic_sydicate_demo.jpg
 pretty_table: true
 ---
 
