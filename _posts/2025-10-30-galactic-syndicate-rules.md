@@ -141,7 +141,7 @@ The Commander represents the highest authority and the last line of protection w
 | The Coalition Spy | Exchange: Draw 2 new Influence Cards from the Deck, and return 2 cards (your choice) to the Deck. | Block Stealing (Can be blocked by The Smuggler or the Coalition Spy) |
 | The Commander |  |  Block Assassination (Blocks The Cyber-Hitman's action) |
 
-### Estructura
+### structure
 
 I want the game to start with a card-dealing effect. Each player will have two cards that appear slightly raised, as if they were holding them face up in their hand. When a player loses an influence card that is turned face up on the table, the other players' cards will be turned face up, and each player will always be able to see their own cards. A list of actions should appear on the player's screen, and they can choose any action. However, the actions associated with the cards they were dealt should be more visible or at the top of the list so the player knows that choosing those cards indicates they are lying. There should also be a "doubt" button that is always active. This is just one idea of ​​what it could look like.
 
