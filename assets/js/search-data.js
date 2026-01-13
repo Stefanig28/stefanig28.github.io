@@ -63,6 +63,16 @@ ninja.data = [{
           description: "Coffee Page",
           section: "Projects",handler: () => {
               window.location.href = "/projects/2_project/";
+            },},{id: "projects-andrés-amp-yessica",
+          title: 'Andrés &amp;amp; Yessica',
+          description: "Personal brand website",
+          section: "Projects",handler: () => {
+              window.location.href = "/projects/3_project/";
+            },},{id: "projects-alula",
+          title: 'Alula',
+          description: "Mental health website",
+          section: "Projects",handler: () => {
+              window.location.href = "/projects/4_project/";
             },},{
         id: 'social-email',
         title: 'email',
